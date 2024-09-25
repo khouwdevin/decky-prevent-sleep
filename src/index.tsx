@@ -1,105 +1,75 @@
 import {
-  ButtonItem,
   definePlugin,
-  DialogButton,
-  Menu,
-  MenuItem,
-  Navigation,
   PanelSection,
   PanelSectionRow,
   ServerAPI,
-  showContextMenu,
   staticClasses,
-} from "decky-frontend-lib";
-import { VFC } from "react";
-import { FaShip } from "react-icons/fa";
+  ToggleField,
+} from 'decky-frontend-lib'
+import { useEffect, useState, VFC } from 'react'
+import { LuScreenShareOff } from 'react-icons/lu'
+import { IoIosInformationCircle } from 'react-icons/io'
 
-import logo from "../assets/logo.png";
+const Content: VFC<{ serverAPI: ServerAPI; state: boolean }> = ({
+  serverAPI,
+  state,
+}: {
+  serverAPI: ServerAPI
+  state: boolean
+}) => {
+  const [keepOn, setKeepOn] = useState<boolean>(false)
 
-// interface AddMethodArgs {
-//   left: number;
-//   right: number;
-// }
+  const onChange = async (e: boolean) => {
+    await serverAPI.callPluginMethod<{ state: boolean }, {}>(
+      'set_save_settings',
+      { state: e }
+    )
+    setKeepOn(e)
+  }
 
-const Content: VFC<{ serverAPI: ServerAPI }> = ({serverAPI}) => {
-  // const [result, setResult] = useState<number | undefined>();
-
-  // const onClick = async () => {
-  //   const result = await serverAPI.callPluginMethod<AddMethodArgs, number>(
-  //     "add",
-  //     {
-  //       left: 2,
-  //       right: 2,
-  //     }
-  //   );
-  //   if (result.success) {
-  //     setResult(result.result);
-  //   }
-  // };
+  useEffect(() => {
+    setKeepOn(state)
+  }, [])
 
   return (
-    <PanelSection title="Panel Section">
+    <PanelSection>
       <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          onClick={(e) =>
-            showContextMenu(
-              <Menu label="Menu" cancelText="CAAAANCEL" onCancel={() => {}}>
-                <MenuItem onSelected={() => {}}>Item #1</MenuItem>
-                <MenuItem onSelected={() => {}}>Item #2</MenuItem>
-                <MenuItem onSelected={() => {}}>Item #3</MenuItem>
-              </Menu>,
-              e.currentTarget ?? window
-            )
-          }
-        >
-          Server says yolo
-        </ButtonItem>
+        <ToggleField
+          checked={keepOn}
+          onChange={onChange}
+          label="Keep your deck on"
+        />
       </PanelSectionRow>
 
       <PanelSectionRow>
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <img src={logo} />
+        <div className={staticClasses.Label}>
+          <IoIosInformationCircle />
+          <div className={staticClasses.Text}>
+            Note that deck will still dim if you set it on settings
+          </div>
         </div>
       </PanelSectionRow>
-
-      <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          onClick={() => {
-            Navigation.CloseSideMenus();
-            Navigation.Navigate("/decky-plugin-test");
-          }}
-        >
-          Router
-        </ButtonItem>
-      </PanelSectionRow>
     </PanelSection>
-  );
-};
-
-const DeckyPluginRouterTest: VFC = () => {
-  return (
-    <div style={{ marginTop: "50px", color: "white" }}>
-      Hello World!
-      <DialogButton onClick={() => Navigation.NavigateToLibraryTab()}>
-        Go to Library
-      </DialogButton>
-    </div>
-  );
-};
+  )
+}
 
 export default definePlugin((serverApi: ServerAPI) => {
-  serverApi.routerHook.addRoute("/decky-plugin-test", DeckyPluginRouterTest, {
-    exact: true,
-  });
+  let state = false
+
+  ;async () => {
+    const res = await serverApi.callPluginMethod<{}, boolean>(
+      'get_save_settings',
+      {}
+    )
+    if (res.success) {
+      state = res.result
+    }
+  }
 
   return {
-    title: <div className={staticClasses.Title}>Example Plugin</div>,
-    content: <Content serverAPI={serverApi} />,
-    icon: <FaShip />,
-    onDismount() {
-      serverApi.routerHook.removeRoute("/decky-plugin-test");
-    },
-  };
-});
+    title: <div className={staticClasses.Title}>Keep On</div>,
+    content: <Content serverAPI={serverApi} state={state} />,
+    icon: <LuScreenShareOff />,
+    onDismount() {},
+  }
+})

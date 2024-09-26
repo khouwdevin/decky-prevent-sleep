@@ -7,7 +7,7 @@ import {
   ToggleField,
 } from 'decky-frontend-lib'
 import { useEffect, useState, VFC } from 'react'
-import { LuScreenShareOff } from 'react-icons/lu'
+import { FaPowerOff } from 'react-icons/fa'
 import { IoIosInformationCircle } from 'react-icons/io'
 
 const Content: VFC<{ serverAPI: ServerAPI; state: boolean }> = ({
@@ -69,7 +69,7 @@ export default definePlugin((serverApi: ServerAPI) => {
   return {
     title: <div className={staticClasses.Title}>Keep On</div>,
     content: <Content serverAPI={serverApi} state={state} />,
-    icon: <LuScreenShareOff />,
+    icon: <FaPowerOff />,
     onDismount() {},
   }
 })

@@ -5,35 +5,52 @@ import configparser
 import decky_plugin
 
 class Plugin:
-    async def get_save_settings(self) -> bool:
+    async def get_save_settings(self) -> list[bool, bool]:
         completePath = os.path.join(decky_plugin.DECKY_PLUGIN_SETTINGS_DIR, "settings", "keep-on.json")
 
         if (os.path.exists(completePath)):
             with open(completePath, "r") as f:
                 data = json.load(f)
-                return data["state"]
+
+                sleepState = bool(data["sleepState"])
+                dimState = bool(data["dimState"])
+
+                return [sleepState, dimState]
         else:
-            return False
+            return [False, False]
     
-    async def set_save_settings(self, state: bool):
+    async def set_save_settings(self, sleepState: bool, dimState: bool):
         completePath = os.path.join(decky_plugin.DECKY_PLUGIN_SETTINGS_DIR, "settings", "keep-on.json")
 
         data = {
-            "state": state,
+            "sleepState": sleepState,
+            "dimState": dimState
         }
 
         with open(completePath, "w") as f:
             json.dump(data, f, indent=4)
 
-        await self.set_system_sleep(state)
-
-    async def set_system_sleep(self, state: bool):
+    async def set_system_sleep(self, sleepState: bool):
         sleepFilePath = os.path.join("etc", "systemd", "sleep.conf")
 
         config = configparser.ConfigParser()
         config.read(sleepFilePath)
 
-        if (state):
+        if (sleepState):
+            config.set("Sleep", "AllowSuspend", "no")
+        else:
+            config.set("Sleep", "AllowSuspend", "yes")
+
+        with open(sleepFilePath, "w") as sleepConfigFile:
+            config.write(sleepConfigFile)
+
+    async def set_system_dim(self, dimState: bool):
+        sleepFilePath = os.path.join("etc", "systemd", "sleep.conf")
+
+        config = configparser.ConfigParser()
+        config.read(sleepFilePath)
+
+        if (dimState):
             config.set("Sleep", "AllowSuspend", "no")
         else:
             config.set("Sleep", "AllowSuspend", "yes")

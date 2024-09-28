@@ -6,38 +6,60 @@ import {
   staticClasses,
   ToggleField,
 } from 'decky-frontend-lib'
-import { useEffect, useState, VFC } from 'react'
+import { useState, VFC } from 'react'
 import { FaPowerOff } from 'react-icons/fa'
 import { IoIosInformationCircle } from 'react-icons/io'
 
-const Content: VFC<{ serverAPI: ServerAPI; state: boolean }> = ({
-  serverAPI,
-  state,
-}: {
+const Content: VFC<{
   serverAPI: ServerAPI
-  state: boolean
-}) => {
-  const [keepOn, setKeepOn] = useState<boolean>(false)
+  sleepState: boolean
+  dimState: boolean
+}> = ({ serverAPI, sleepState, dimState }) => {
+  const [keepOn, setKeepOn] = useState<boolean>(sleepState)
+  const [dimOff, setDimOff] = useState<boolean>(dimState)
 
-  const onChange = async (e: boolean) => {
-    await serverAPI.callPluginMethod<{ state: boolean }, {}>(
+  const onChangeSleep = (e: boolean) => {
+    serverAPI.callPluginMethod<{ sleepState: boolean; dimState: boolean }, {}>(
       'set_save_settings',
-      { state: e }
+      { sleepState: e, dimState: dimOff }
     )
+    serverAPI.callPluginMethod<{ sleepState: boolean }, {}>(
+      'set_system_sleep',
+      {
+        sleepState: e,
+      }
+    )
+
     setKeepOn(e)
   }
 
-  useEffect(() => {
-    setKeepOn(state)
-  }, [])
+  const onChangeDim = (e: boolean) => {
+    serverAPI.callPluginMethod<{ sleepState: boolean; dimState: boolean }, {}>(
+      'set_save_settings',
+      { sleepState: keepOn, dimState: e }
+    )
+    serverAPI.callPluginMethod<{ dimState: boolean }, {}>('set_system_dim', {
+      dimState: e,
+    })
+
+    setDimOff(e)
+  }
 
   return (
     <PanelSection>
       <PanelSectionRow>
         <ToggleField
           checked={keepOn}
-          onChange={onChange}
+          onChange={onChangeSleep}
           label="Keep your deck on"
+        />
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <ToggleField
+          checked={dimOff}
+          onChange={onChangeDim}
+          label="Disable dim screen"
         />
       </PanelSectionRow>
 
@@ -45,7 +67,7 @@ const Content: VFC<{ serverAPI: ServerAPI; state: boolean }> = ({
         <div className={staticClasses.Label}>
           <IoIosInformationCircle />
           <div className={staticClasses.Text}>
-            Note that deck will still dim if you set it on settings
+            Note that this plugin still in development use it with caution
           </div>
         </div>
       </PanelSectionRow>
@@ -54,21 +76,29 @@ const Content: VFC<{ serverAPI: ServerAPI; state: boolean }> = ({
 }
 
 export default definePlugin((serverApi: ServerAPI) => {
-  let state = false
+  let sleepState = false
+  let dimState = false
 
   ;async () => {
-    const res = await serverApi.callPluginMethod<{}, boolean>(
+    const res = await serverApi.callPluginMethod<{}, boolean[]>(
       'get_save_settings',
       {}
     )
     if (res.success) {
-      state = res.result
+      sleepState = res.result[0]
+      dimState = res.result[1]
     }
   }
 
   return {
     title: <div className={staticClasses.Title}>Keep On</div>,
-    content: <Content serverAPI={serverApi} state={state} />,
+    content: (
+      <Content
+        serverAPI={serverApi}
+        sleepState={sleepState}
+        dimState={dimState}
+      />
+    ),
     icon: <FaPowerOff />,
     onDismount() {},
   }
